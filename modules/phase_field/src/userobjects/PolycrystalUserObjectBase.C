@@ -70,15 +70,15 @@ PolycrystalUserObjectBase::initialSetup()
   if (_op_num < 1)
     mooseError("No coupled variables found");
 
-  for (unsigned int dim = 0; dim < _dim; ++dim)
-  {
-    bool first_variable_value = _mesh.isTranslatedPeriodic(_vars[0]->number(), dim);
-
-    for (unsigned int i = 1; i < _vars.size(); ++i)
-      if (_mesh.isTranslatedPeriodic(_vars[i]->number(), dim) != first_variable_value)
-        mooseError("Coupled polycrystal variables differ in periodicity");
-  }
-
+  // for (unsigned int dim = 0; dim < _dim; ++dim)
+  // {
+  //   bool first_variable_value = _mesh.isTranslatedPeriodic(_vars[0]->number(), dim);
+  //
+  //   for (unsigned int i = 1; i < _vars.size(); ++i)
+  //     if (_mesh.isTranslatedPeriodic(_vars[i]->number(), dim) != first_variable_value)
+  //       mooseError("Coupled polycrystal variables differ in periodicity");
+  // }
+  //
   FeatureFloodCount::initialSetup();
 }
 

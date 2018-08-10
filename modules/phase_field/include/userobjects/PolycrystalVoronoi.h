@@ -11,6 +11,7 @@
 #define POLYCRYSTALVORONOI_H
 
 #include "PolycrystalUserObjectBase.h"
+#include "DelimitedFileReader.h"
 
 // Forward Declarations
 class PolycrystalVoronoi;
@@ -32,11 +33,19 @@ public:
 
 protected:
   /// The number of grains to create
-  const unsigned int _grain_num;
+  unsigned int _grain_num;
 
   const bool _columnar_3D;
 
   const unsigned int _rand_seed;
+
+  // Name of file containing grain center values
+  std::string _points_file_name;
+  // MOOSE Utility: Delimited file reader, for reading grain center values file
+  MooseUtils::DelimitedFileReader _points_file_reader;
+
+  ///Type of Voronoi specification
+  MooseEnum _method;
 
   Point _bottom_left;
   Point _top_right;
