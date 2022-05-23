@@ -5,23 +5,22 @@
 [Mesh]
   [igafile]
     type = FileMeshGenerator
-    file = cframe_iga_geom.e
-    clear_spline_nodes = true
+    file = cframe_fea_geom.e
   []
 []
 
 [Variables]
   [disp_x]
     order = SECOND
-    family = RATIONAL_BERNSTEIN
+    family = LAGRANGE
   []
   [disp_y]
     order = SECOND
-    family = RATIONAL_BERNSTEIN
+    family = LAGRANGE
   []
   [disp_z]
     order = SECOND
-    family = RATIONAL_BERNSTEIN
+    family = LAGRANGE
   []
 []
 
@@ -185,5 +184,5 @@
 []
 
 [Outputs]
-  vtk = true
+  exodus = true
 []
