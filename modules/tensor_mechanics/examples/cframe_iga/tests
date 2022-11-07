@@ -1,5 +1,5 @@
 [Tests]
-  [cframe]
+  [cframe_iga]
     type = XMLDiff
     input = 'cframe_iga.i'
     exodus_version = '>=8.0'
@@ -7,5 +7,14 @@
     vtk_version = '>=9.1'
     max_parallel = 1 # number of VTK output files changes with num processes, so we are sticking w/ one for now
     xmldiff = 'cframe_iga_out_001.pvtu cframe_iga_out_001_0.vtu'
+  []
+
+  [cframe_fea]
+    type = Exodiff
+    input = 'cframe_fea.i'
+    exodus_version = '>=8.0'
+    vtk_version = '>=9.0'
+    max_parallel = 1 # number of VTK output files changes with num processes, so we are sticking w/ one for now
+    exodiff = cframe_fea_out.e
   []
 []
