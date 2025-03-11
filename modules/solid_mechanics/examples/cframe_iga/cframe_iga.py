@@ -14,8 +14,8 @@ def run_flex( args ):
     flex = import_flex()
     flex.cmd( 'reset' )
     flex.cmd( f'root_dir "{path_to_this_script}"' )
-    
-    flex.cmd(f'import "{os.path.join( path_to_this_script, "cframe.stp" )}"' )
+
+    flex.cmd(f'import "{os.path.join( path_to_this_script, "c-frame.step" )}"' )
 
     flex.cmd( 'name part 1 "cframe"' )
     flex.cmd( 'set hold_surface add surfaces [74]' )
@@ -120,16 +120,15 @@ def run_flex( args ):
     flex.cmd( 'procedures apply_load_procedure solid_mechanics load_conditions 0 push_top' )
     flex.cmd( 'procedures apply_load_procedure solid_mechanics boundary_conditions 0 hold_bottom' )
 
-    flex.cmd( 'job trimmed_cframe new' )
-    flex.cmd( 'job trimmed_cframe trim processor_count 1' )
-    flex.cmd( 'job trimmed_cframe trim trim_parts [cframe]' )
-    flex.cmd( 'job trimmed_cframe submit' )
-    flex.cmd( 'job trimmed_cframe wait' )
+    flex.cmd( 'save "cframe.cf"' )
 
 def do_interop():
+    mpiexec = get_coreform_paths()["mpiexec"]
     coreform_trim = get_coreform_paths()["trim"]
-    command = f"{coreform_trim} --ii jobs/trimmed_cframe --io trimmed_cframe_moose"
+    # os.chdir( "jobs" )
+    command = f"{mpiexec} -n 1 {coreform_trim} --ii cframe.cf --io trimmed_cframe_moose --epic"
     subprocess.check_call( command, shell=True )
+    # os.chdir( path_to_this_script )
 
 def import_flex( verbose=False ):
     coreform_paths = get_coreform_paths()
@@ -141,15 +140,19 @@ def import_flex( verbose=False ):
 def get_coreform_paths():
     coreform_paths = {}
     if "win" in sys.platform:
-        coreform_paths["flex"] =         pathlib.Path( r"C:\Program Files\Coreform Flex 2025.3\bin\coreform_flex.exe" )
-        coreform_paths["flex_path"] =    pathlib.Path( r"C:\Program Files\Coreform Flex 2025.3\bin" )
-        coreform_paths["trim"] =         pathlib.Path( r"C:\Program Files\Coreform Flex 2025.3\bin\coreform_trim.bat" )
-        coreform_paths["trim_path"] =    pathlib.Path( r"C:\Program Files\Coreform Flex 2025.3\bin" )
+        coreform_paths["flex"] =         pathlib.Path( r"C:\Program Files\Coreform Flex 2025.9\bin\coreform_flex.exe" )
+        coreform_paths["flex_path"] =    pathlib.Path( r"C:\Program Files\Coreform Flex 2025.9\bin" )
+        coreform_paths["trim"] =         pathlib.Path( r"C:\Program Files\Coreform Flex 2025.9\bin\coreform_trim.bat" )
+        coreform_paths["trim_path"] =    pathlib.Path( r"C:\Program Files\Coreform Flex 2025.9\bin" )
+        coreform_paths["mpiexec"] =      pathlib.Path( r"C:\Program Files\Coreform Flex 2025.9\bin\mpiexec.exe" )
+        coreform_paths["mpiexec_path"] = pathlib.Path( r"C:\Program Files\Coreform Flex 2025.9\bin" )
     elif "lin" in sys.platform:
-        coreform_paths["flex"] =         pathlib.Path( "/opt/Coreform-Flex-2025.3/bin/coreform_flex" )
-        coreform_paths["flex_path"] =    pathlib.Path( "/opt/Coreform-Flex-2025.3/bin" )
-        coreform_paths["trim"] =         pathlib.Path( "/opt/Coreform-Flex-2025.3/bin/coreform_trim" )
-        coreform_paths["trim_path"] =    pathlib.Path( "/opt/Coreform-Flex-2025.3/bin" )
+        coreform_paths["flex"] =         pathlib.Path( "/opt/Coreform-Flex-2025.9/bin/coreform_flex" )
+        coreform_paths["flex_path"] =    pathlib.Path( "/opt/Coreform-Flex-2025.9/bin" )
+        coreform_paths["trim"] =         pathlib.Path( "/opt/Coreform-Flex-2025.9/bin/coreform_trim" )
+        coreform_paths["trim_path"] =    pathlib.Path( "/opt/Coreform-Flex-2025.9/bin" )
+        coreform_paths["mpiexec"] =      pathlib.Path( "/opt/Coreform-Flex-2025.9/bin/mpiexec" )
+        coreform_paths["mpiexec_path"] = pathlib.Path( "/opt/Coreform-Flex-2025.9/bin" )
     return coreform_paths
 
 def script_arguments():
@@ -160,5 +163,4 @@ def script_arguments():
 
 if __name__ == "__main__":
     args = script_arguments()
-    print( args )
     main( args )
