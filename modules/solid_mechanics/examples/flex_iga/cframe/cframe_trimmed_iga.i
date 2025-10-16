@@ -14,12 +14,15 @@
 [Variables]
   [disp_x]
     order = FIRST
+    family = LAGRANGE
   []
   [disp_y]
     order = FIRST
+    family = LAGRANGE
   []
   [disp_z]
     order = FIRST
+    family = LAGRANGE
   []
 []
 
@@ -28,7 +31,7 @@
     [QuasiStatic]
       [./all]
         strain = SMALL
-        add_variables = true
+        # add_variables = true
       [../]
     [../]
   [../]
@@ -37,12 +40,12 @@
 [AuxVariables]
     [von_mises]
        # Dependent variable used to visualize the von Mises stress
-       order = SECOND
+       order = FIRST
        family = MONOMIAL
     []
     [max_princ]
        # Dependent variable used to visualize the maximum principal (max-tensile) stress
-       order = SECOND
+       order = FIRST
        family = MONOMIAL
     []
 []
@@ -67,7 +70,7 @@
   [Pressure]
     [load]
       # Applies the pressure
-      boundary = 'push_top'
+      boundary = 'load_surface'
       factor = 2000 # psi
     []
   []
@@ -75,7 +78,7 @@
     # Anchors the bottom against deformation in the x-direction
     type = PenaltyDirichletBC
     variable = disp_x
-    boundary = 'hold_bottom'
+    boundary = 'hold_surface'
     value = 0.0
     penalty = 24e9
   []
@@ -83,7 +86,7 @@
     # Anchors the bottom against deformation in the y-direction
     type = PenaltyDirichletBC
     variable = disp_y
-    boundary = 'hold_bottom'
+    boundary = 'hold_surface'
     value = 0.0
     penalty = 24e9
   []
@@ -91,7 +94,7 @@
     #Anchors the bottom against deformation in the z-direction
     type = PenaltyDirichletBC
     variable = disp_z
-    boundary = 'hold_bottom'
+    boundary = 'hold_surface'
     value = 0.0
     penalty = 24e9
   []
@@ -103,11 +106,6 @@
     youngs_modulus = 24e6 #psi
     poissons_ratio = 0.33
     type = ComputeIsotropicElasticityTensor
-  []
-  [strain]
-    # Computes the strain, assuming small strains
-    type = ComputeSmallStrain
-    displacements = 'disp_x disp_y disp_z'
   []
   [stress]
     # Computes the stress, using linear elasticity
@@ -151,15 +149,16 @@
 [Executioner]
   # We solve a steady state problem using Newton's iteration
   type = Steady
-  solve_type = NEWTON
+  solve_type = Newton
   nl_rel_tol = 1e-9
-  l_max_its = 300
+  l_max_its = 10
   l_tol = 1e-4
-  nl_max_its = 30
-  petsc_options_iname = '-pc_type --pc_factor_zeropivot'
-  petsc_options_value = 'lu 0'
+  nl_max_its = 9
+  petsc_options_iname = '-pc_type -pc_factor_shift_type'
+  petsc_options_value = 'lu nonzero'
 []
 
 [Outputs]
   vtk = true
+  exodus = true
 []

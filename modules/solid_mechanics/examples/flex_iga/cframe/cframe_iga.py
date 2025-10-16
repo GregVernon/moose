@@ -1,7 +1,7 @@
 import os
 import sys
 import argparse
-import pathlib
+from pathlib import Path
 import subprocess
 
 path_to_this_script = os.path.dirname( os.path.realpath( __file__ ) )
@@ -140,19 +140,23 @@ def import_flex( verbose=False ):
 def get_coreform_paths():
     coreform_paths = {}
     if "win" in sys.platform:
-        coreform_paths["flex"] =         pathlib.Path( r"C:\Program Files\Coreform Flex 2025.9\bin\coreform_flex.exe" )
-        coreform_paths["flex_path"] =    pathlib.Path( r"C:\Program Files\Coreform Flex 2025.9\bin" )
-        coreform_paths["trim"] =         pathlib.Path( r"C:\Program Files\Coreform Flex 2025.9\bin\coreform_trim.bat" )
-        coreform_paths["trim_path"] =    pathlib.Path( r"C:\Program Files\Coreform Flex 2025.9\bin" )
-        coreform_paths["mpiexec"] =      pathlib.Path( r"C:\Program Files\Coreform Flex 2025.9\bin\mpiexec.exe" )
-        coreform_paths["mpiexec_path"] = pathlib.Path( r"C:\Program Files\Coreform Flex 2025.9\bin" )
+        coreform_paths["cubit"] =        Path( r"C:\Program Files\Coreform Cubit 2025.10\bin\coreform_cubit.exe" )
+        coreform_paths["cubit_path"] =   Path( r"C:\Program Files\Coreform Cubit 2025.10\bin" )
+        coreform_paths["flex"] =         Path( r"C:\Program Files\Coreform Flex 2025.10\bin\coreform_flex.exe" )
+        coreform_paths["flex_path"] =    Path( r"C:\Program Files\Coreform Flex 2025.10\bin" )
+        coreform_paths["trim"] =         Path( r"C:\Program Files\Coreform Flex 2025.10\bin\coreform_trim.bat" )
+        coreform_paths["trim_path"] =    Path( r"C:\Program Files\Coreform Flex 2025.10\bin" )
+        coreform_paths["mpiexec"] =      Path( r"C:\Program Files\Coreform Flex 2025.10\bin\mpiexec.exe" )
+        coreform_paths["mpiexec_path"] = Path( r"C:\Program Files\Coreform Flex 2025.10\bin" )
     elif "lin" in sys.platform:
-        coreform_paths["flex"] =         pathlib.Path( "/opt/Coreform-Flex-2025.9/bin/coreform_flex" )
-        coreform_paths["flex_path"] =    pathlib.Path( "/opt/Coreform-Flex-2025.9/bin" )
-        coreform_paths["trim"] =         pathlib.Path( "/opt/Coreform-Flex-2025.9/bin/coreform_trim" )
-        coreform_paths["trim_path"] =    pathlib.Path( "/opt/Coreform-Flex-2025.9/bin" )
-        coreform_paths["mpiexec"] =      pathlib.Path( "/opt/Coreform-Flex-2025.9/bin/mpiexec" )
-        coreform_paths["mpiexec_path"] = pathlib.Path( "/opt/Coreform-Flex-2025.9/bin" )
+        coreform_paths["cubit"] =        Path( "/home/gvernon2/apps/coreform/Coreform-Cubit-2025.10/bin/coreform_cubit" )
+        coreform_paths["cubit_path"] =   Path( "/home/gvernon2/apps/coreform/Coreform-Cubit-2025.10/bin" )
+        coreform_paths["flex"] =         Path( "/home/gvernon2/apps/coreform/Coreform-Flex-2025.10/bin/coreform_flex" )
+        coreform_paths["flex_path"] =    Path( "/home/gvernon2/apps/coreform/Coreform-Flex-2025.10/bin" )
+        coreform_paths["trim"] =         Path( "/home/gvernon2/apps/coreform/Coreform-Flex-2025.10/bin/coreform_trim" )
+        coreform_paths["trim_path"] =    Path( "/home/gvernon2/apps/coreform/Coreform-Flex-2025.10/bin" )
+        coreform_paths["mpiexec"] =      Path( "/home/gvernon2/apps/coreform/Coreform-Flex-2025.10/bin/mpiexec" )
+        coreform_paths["mpiexec_path"] = Path( "/home/gvernon2/apps/coreform/Coreform-Flex-2025.10/bin" )
     return coreform_paths
 
 def script_arguments():
