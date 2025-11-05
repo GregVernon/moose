@@ -4,9 +4,7 @@ AMP: Asset Management Plan
 ASME: American Society of Mechanical Engineers
 BC: boundary condition
 BCs: boundary conditions
-BREP: boundary representation
 BVP: boundary value problem
-CAD: Computer-Aided Design
 CCB: Change Control Board
 CCI: Communication and Contact Information
 CD: continuous deployment
@@ -28,7 +26,6 @@ GUI: graphical user interface
 HIT: Hierarchical Input Text
 HPC: High Performance Computing
 I/O: Input/Output
-IGA: Isogeometric Analysis
 INL: Idaho National Laboratory
 IT: Information Technology
 JFNK: Jacobian-Free Newton-Krylov
@@ -42,7 +39,6 @@ MPI: Message Passing Interface
 MOOSE: Multiphysics Object Oriented Simulation Environment
 NE: Nuclear Energy
 NEAMS: Nuclear Energy Advanced Modeling and Simulation
-NURBS: Non-Uniform Rational B-Splines
 NCRC: Nuclear Computational Resource Center
 NQA-1: Nuclear Quality Assurance Level 1
 PETSc: Portable, Extensible Toolkit for Scientific Computation

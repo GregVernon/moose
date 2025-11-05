@@ -96,7 +96,7 @@ introductory theory pages on the various models:
 - [Shell elements](solid_mechanics/ShellElements.md)
 - [Reduced Order Models](/LAROMANCE.md)
 - [Frequency Domain Dynamics](/1d_elastic_waves.md)
-- [Isogeometric Analysis](solid_mechanics/examples/cframe_iga.md)
+- [Isogeometric Analysis](solid_mechanics/IsogeometricAnalysis.md)
 !col-end!
 !row-end!
 

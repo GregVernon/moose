@@ -1,116 +1,113 @@
-# Isogeometric Analysis
-
-## Background
-
-[!ac](IGA) is an approach to finite element analysis that was first introduced in 2005 by [!cite](hughes2005isogeometric).
-A principal challenge that IGA seeks to address is the inordinate amount time and effort spent generating high-quality meshes for complex geometries.
-One issue identified by Hughes was that traditional finite element analysis, at the time, largely relied upon low-order, $C^0$ continuous, interpolatory basis functions while modern [!ac](CAD) systems primarily used higher-order, $C^k$ continuous, non-interpoloatory basis functions known as [!ac](NURBS) to represent complex geometric shapes.
-When initially proposed the central hypothesis was that, since NURBS basis functions meet the requirements for both FEM and CAD, that mesh-generation related issues could be largely eliminated simply by utilizing NURBS basis functions within finite element analysis -- thereby linkng the CAD and FEM representations directly.
-
-In practice, however, isogeometric analysis in this nascent form does not address all mesh-generation related issues, namely that the dominant [!ac](BREP) format used by CAD systems defines geometry using (typically trimmed) bounding surfaces rather than volumetric representations.
-Furthermore, hexahedral meshes are often preferred for challenging nonlinear problems, yet unlike tetrahedral meshes there is no known algorithm for generating high-quality hexahedral meshes from arbitrary geometries -- a fact that is a primary cause of the principal challenge that IGA was developed to address.
-Even the development of various unstructured spline technologies, such as T-splines ([!cite](sederberg2003t)) and U-splines ([!cite](thomas2022u)), have not fully resolved this core mesh-generation issue.
-
-Modern IGA implementations, including the implementation within MOOSE, have focused on immersed-style approaches to the meshing problem.
-In these approaches the geometry is "immersed" within a simple or trivial-to-mesh domain, that is then meshed using spline basis functions.
-This approach largely eliminates the labor-intensive mesh generation step, at the cost of requiring specialized numerical techniques to accurately and robustly resolve the geometry within the background mesh.
-
-## Mathematic Preliminaries
-
-### Bézier Extraction
-
-A core concept in modern isogeometric analysis is *Bézier extraction* ([!cite](borden2011isogeometric)), which provides a mechanism for representing spline basis functions in terms of standard finite element shape functions.
-This allows existing finite element codes, such as MOOSE, to utilize spline basis functions while minimizing significant changes to the underlying codebase.
-
-!alert note
-The terminology of *Bézier extraction* comes from the initial development's use of $C^0$ Bernstein polynomials as the underlying basis functions, which are the basis functions used in Bézier curves and surfaces.
-However, the exact same technique can also be applied to a spline of any continuity, with $C^{-1}$ basis functions being of particular interest. 
-The approach can also be applied to other basis function families, an example being the Lagrange polynomials ([!cite](schillinger2016lagrange)) which was coined *Lagrange* extraction.
-Rather than provide unique names for each basis function family, the more general term *extraction* is often used.
-!alert-end!
-
-Consider a quadratic $C^1$ B-spline basis, $N(x)$, defined over three uniformly spaced elements on the interval $[0,1]$ and a corresponding $C^{-1}$ B-spline basis, $B(x)$, defined over the same elements.
-The global Bézier extraction operator, $\mathbf{C}$, can be computed by 
-
-\begin{equation}
-\mathbf{C}^g = \left( \frac{ \langle B, N^T \rangle_{ij} }{ \langle B, B^T \rangle_{ij} } \right)^T
-\end{equation}
-
-where $\langle \cdot , \cdot \rangle_{ij}$ indicates the element-wise inner product over the domain.
-For example:
-
-\begin{equation}
-    \langle B, N^T \rangle_{ij} = 
-    \begin{bmatrix}
-        \langle B_1, N_1 \rangle & \cdots & \langle B_1, N_5 \rangle \\
-        \vdots & \ddots & \vdots \\
-        \langle B_7, N_1 \rangle & \cdots & \langle B_7, N_5 \rangle \\
-    \end{bmatrix}
-\end{equation}
-
-The spline basis functions can then be represented in terms of the Bézier basis functions as:
-
-\begin{equation}
-    N(x) = \mathbf{C}^g B(x)
-\end{equation}
-
-The global extraction operator can be used to perform global assembly:
-
-\begin{equation}
-    \mathbf{K}^g = \mathbf{C}^{g} \mathbf{K}^b \left( \mathbf{C}^g \right)^T
-\end{equation}
-
-Where $\mathbf{K}^b$ is the global stiffness matrix assembled using the $C^{-1}$ basis functions and $\mathbf{K}^g$ is the global stiffness matrix assembled using the $C^1$ basis functions:
-
-\begin{equation}
-    \mathbf{K}^b =
-    \begin{bmatrix}
-        k^1_{1,1} & k^1_{1,2} & k^1_{1,3} & 0 & 0 & 0 & 0 & 0 & 0 \\
-        k^1_{2,1} & k^1_{2,2} & k^1_{2,3} & 0 & 0 & 0 & 0 & 0 & 0 \\
-        k^1_{3,1} & k^1_{3,2} & k^1_{3,3} & 0 & 0 & 0 & 0 & 0 & 0 \\
-        0 & 0 & 0 & k^2_{1,1} & k^2_{1,2} & k^2_{1,3} & 0 & 0 & 0 \\
-        0 & 0 & 0 & k^2_{2,1} & k^2_{2,2} & k^2_{2,3} & 0 & 0 & 0 \\
-        0 & 0 & 0 & k^2_{3,1} & k^2_{3,2} & k^2_{3,3} & 0 & 0 & 0 \\
-        0 & 0 & 0 & 0 & 0 & 0 & k^3_{1,1} & k^3_{1,2} & k^3_{1,3} \\
-        0 & 0 & 0 & 0 & 0 & 0 & k^3_{2,1} & k^3_{2,2} & k^3_{2,3} \\
-        0 & 0 & 0 & 0 & 0 & 0 & k^3_{3,1} & k^3_{3,2} & k^3_{3,3}
-    \end{bmatrix}, \quad
-    \mathbf{K}^g =
-    \begin{bmatrix}
-        K_{1,1} & K_{1,2} & K_{1,3} & 0       & 0 \\ 
-        K_{2,1} & K_{2,2} & K_{2,3} & K_{2,4} & 0 \\ 
-        K_{3,1} & K_{3,2} & K_{3,3} & K_{3,4} & K_{3,5} \\ 
-        0       & K_{4,2} & K_{4,3} & K_{4,4} & K_{4,5} \\ 
-        0       & 0       & K_{5,3} & K_{5,4} & K_{5,5} \\
-    \end{bmatrix}
-\end{equation}
-
-If a traditional finite element code provides $K^b$ on its own $C^0$ basis then one simply performs Bézier extraction on the $C^0$ basis.
-
-# Isogeometric Analysis in MOOSE
-
-## Implementation details
-
-## Limitations
-
-1. While Coreform Flex supports generation of body-fitted or partially-fitted spline meshes, MOOSE currently only supports the use of fully-immersed meshes.
-2. While isogeometric analysis encompasses one- and two-dimensional problems, Coreform Flex currently only supports three-dimensional problems, thus no testing has been performed for one- or two-dimensional problems.
-3. The current implementation in MOOSE often results in very-poorly conditioned linear systems, thus we recommend using the `lu` preconditioner, which is limited to serial execution only.
 
 
-# Example: Hydraulic press c-frame stress analysis
+# Example: Hydraulic press C-frame stress analysis
 
 This problem is adapted from an undergraduate textbook [!cite](collins_busby_staab_2010) that analyzes the stress in a hydraulic press's main structural component: a c-frame.
 
 ## Problem statement
 
-A 13-kN hydraulic press for removing and reinstalling bearings in small-to medium-sized electric motors is to consist of a commercially available cylinder mounted vertically in a C-frame, with dimensions as sketched in Figure P4.32. It is being proposed to use ASTM A-48 (Class 50) gray cast iron for the C-frame material. Predict whether the C-frame can support the maximum load without failure.
+A 3000-lbf hydraulic press for removing and reinstalling bearings in small-to medium-sized electric motors is to consist of a commercially available cylinder mounted vertically in a C-frame.
+It is being proposed to use ASTM A-48 (Class 50) gray cast iron for the C-frame material.
+Predict whether the C-frame can support the maximum load without failure.
+-- *Adapted with permission from [!cite](collins_busby_staab_2010)*
+
+The dimensions of the C-frame are showin in [!ref](cframe-dimside), [!ref](cframe-dimsection), and [!ref](cframe-dimconditionsurface).
+
+!media solid_mechanics/iga/CFrame_DimSide.png
+    id=cframe-dimside
+    caption=A sideview of the C-frame with dimensional information.
+    style=width:70%;margin-left:auto;margin-right:auto;
+
+!media solid_mechanics/iga/CFrame_DimSection.png
+    id=cframe-dimsection
+    caption=A cross-sectional view of the C-frame with dimensional information.
+    style=width:70%;margin-left:auto;margin-right:auto;
+
+!media solid_mechanics/iga/CFrame_DimConditionSurface.png
+    id=cframe-dimconditionsurface
+    caption=A detailed view of the surface upon which the pressure load condition will be applied. An equivalent surface will have a fixed-displacement condition.
+    style=width:70%;margin-left:auto;margin-right:auto;
+
+!table id=table-material-pros caption=Material properties for ASTM A-48 (Class 50) gray cast iron.
+| Property | Value | Units |
+| - | - | - |
+| Young's modulus           | $24 \times 10^6$ | $\mathrm{psi}$  ( i.e., $\frac{\mathrm{lbf}}{\mathrm{in}^2}$ ) |
+| Poisson's ratio           | $0.29$           | $\mathrm{(dimensionless)}$ |
+| Ultimate tensile strength | $50 \times 10^3$ | $\mathrm{psi}$  ( i.e., $\frac{\mathrm{lbf}}{\mathrm{in}^2}$ ) |
+
+
+## Hand-calculation
+
+Cast-iron is considered to have little to no ductility, thus we assume brittle failure theory – thus
+determining whether ultimate tensile strength (maximum principal stress) exceeds the ultimate
+tensile strength is the goal of this analysis, determining the factor of safety, etc.
+Based on our general understanding of the problem, we predict that the maximum tensile stress
+occurs on the inside of the C-Frame as shown in [!ref](cframe-expectedmaxstresslocation).
+
+!media solid_mechanics/iga/CFrame_ExpectedMaxStressLocation.png
+    id=cframe-expectedmaxstresslocation
+    caption=The location at which we intuit the maximum tensile stress will occur, based on our problem definition, is denoted by the yellow sphere.
+    style=width:70%;margin-left:auto;margin-right:auto;
+
+At this location, the applied load exerts both a normal force and a bending moment.
+Because of the long moment arm, we expect that the moment may be the main participant in the resultant
+stresses, so we focus our attention on understanding the bending moment in an initially curved
+beam.
+
+!alert! tip prefix=False title=Hand calculation
+> \begin{equation}
+>   \sigma_{i} = \frac{M c_{i}}{e A r_{i}}, \quad e = r_{c} - \frac{A}{\int \frac{dA}{r}}
+> \end{equation}
+>
+> \begin{equation}
+>   \begin{split}
+>       \int \frac{dA}{r} &= b_1 \ln\left( \frac{r_{i} h_1}{r_{i}} \right) + b_2 \ln\left( \frac{r_{o}}{r_{i} + h_1} \right) \\
+>       \int \frac{dA}{r} &= 1 \ln\left( \frac{1.5 + 0.4}{1.5} \right) + 0.4 \ln\left( \frac{2.6}{1.5 + 0.4} \right) \\
+>       \int \frac{dA}{r} &= 0.361852 \ \mathrm{in}
+>   \end{split}
+> \end{equation}
+>
+> \begin{equation}
+>   A = 0.4 + 0.28 = 0.68 \ \mathrm{in}^2
+> \end{equation}
+>
+> \begin{equation}
+>   r_{c} = \frac{0.4 \cdot 1.7 + 0.28 \cdot 2.25}{0.68} = 1.92647 \ \mathrm{in}
+> \end{equation}
+>
+> \begin{equation}
+>   e = 0.0472487 \ \mathrm{in}
+> \end{equation}
+>
+> \begin{equation}
+>   r_{n} = r_{c} - e = 1.87925 \ \mathrm{in}
+> \end{equation}
+>
+> \begin{equation}
+>   c_{i} = r_{n} - r_{i} = 0.37925 \ \mathrm{in}
+> \end{equation}
+>
+> \begin{equation}
+>   \begin{split}
+>       M &= 3000 \ \mathrm{lbf} \cdot( 3.5 \ \mathrm{in} + r_{c}) \\
+>         &= 16279.4 \ \mathrm{lbf} \cdot \mathrm{in}
+>   \end{split}
+> \end{equation}
+>
+> \begin{equation}
+>   \sigma_{i} \approx 128 \times 10^3 \ \mathrm{psi} \\
+> \end{equation}
+>
+> Since $\sigma_i \gg \sigma_{\mathrm{UTS}}$, we don't bother considering the normal load as we already can say, with confidence, that this part is likely to experience brittle failure.
+> For completeness, however, the normal stress due to the applied load applies an additional tensile stress of $\sigma \approx 4.4 \times 10^3 \ \mathrm{psi}$.
+> Thus, we might expect our MOOSE simulation to predict a maximum principal stress of $\sigma_{i} \approx 132 \times 10^3 \ \mathrm{psi}$.
+!alert-end!
 
 ## Running the example
 
 ### Required software
 
-We provide a self-contained Python script, `cframe_iga.py`, that automates the model setup, mesh generation, conversion to libMesh-compatible formats and export of extraction operators, and execution of the MOOSE simulation.
+We provide a self-contained Python script, `cframe_iga.py` (see [!ref](cframe_iga)), that automates the model setup, mesh generation, conversion to libMesh-compatible formats and export of extraction operators, and execution of the MOOSE simulation.
 To run the example, you will need the following software installed:
 
 1. MOOSE, with a built `solid_mechanics` module (using the default `opt` mode).
@@ -128,20 +125,83 @@ Additionally, to support CI/CD we have provided preprocessed mesh files and extr
 
 ```bash
 cd ~/projects/moose/modules/solid_mechanics/examples/flex_iga/cframe
-python3 cframe_iga.py --degree 2 --mesh-size 0.25 --mesh-mode boundingbox --num-trim-proc 1 --num-moose-proc 1
+python3 cframe_iga.py
 ```
 
-Within the Python script file, see [!ref](cframe_iga), there are unique methods that will generate a uspline on the discretized mesh. 
+The Python script performs four main tasks:
 
-!listing examples/flex_iga/cframe/cframe_iga.py id=cframe_iga caption=Complete Coreform Cubit file for generating [!ac](IGA) input mesh 
+1. `run_cubit()`
+
+    - Setup the CAD model and, if requested, generate body-fitted or partially-fitted spline meshes using Coreform Cubit.
+
+2. `run_flex()`
+
+    - Define the spline parameters and, if requested, generate an immersed spline mesh using Coreform Flex.
+
+3. `run_interop()`
+
+    - Compute the trimmed spline extraction operators using Coreform Trim and export to MOOSE-compatible files.
+
+4. `run_moose()`
+
+    - Setup and run the MOOSE simulation using the generated mesh and extraction operators.
+
+!listing examples/flex_iga/cframe/cframe_iga.py id=cframe_iga caption=Complete Python script for setting up and running the "c-frame" example problem with [!ac](IGA) in MOOSE.
+
+## Isogeometric Model Setup
+
+The `cframe_iga.py` script supports setting up three meshing approaches:
+
+1. Body-fitted meshing.
+2. Partially-immersed ("Flex-fitted") meshing.
+3. Fully-immersed meshing via a bounding-box approach.
+
+### Body-fitted mesh
+
+!media solid_mechanics/iga/CFrame_BodyfitMesh.png 
+    id=cframe-mesh-bodyfit 
+    caption=Bodyfit mesh generated in Coreform Cubit for the C-frame. Note the significant defeaturing.
+    style=width:70%;margin-left:auto;margin-right:auto;
+
+### Partially-fitted mesh
+
+!media solid_mechanics/iga/CFrame_FlexFitMesh.png 
+    id=cframe-mesh-flexfit 
+    caption=A partially-immersed mesh that conforms to the overall shape of the C-frame while immersing small, complex-to-mesh, features (i.e., flex-fitted).
+    style=width:70%;margin-left:auto;margin-right:auto;
+
+### Immersed mesh
+
+!media solid_mechanics/iga/CFrame_BoundingBoxMesh.png 
+    id=cframe-mesh-boundingbox 
+    caption=Immersed mesh based on a bounding-box approach generated in Coreform Flex for the C-frame.
+    style=width:70%;margin-left:auto;margin-right:auto;
 
 ## MOOSE-IGA Simulation
 
-Performing the simulation utilizing the mesh created above does not require much with respect to the MOOSE input, simply 
-load the mesh from a file and select utilize the RATIONAL_BERNSTEIN element family as shown in [!ref](moose-iga-input).
-Exporting using the VTK format (`vtk = true`) input will output in a format that will capture the higher-order nature 
-of the [!ac](IGA) based elements using Paraview visualization. 
+The current implementation of [!ac](IGA) in MOOSE expects the mesh and extraction operators to be provided from an external source, such as Coreform Flex.
+These files are then specified in the MOOSE input file using the `[Mesh]` block, as shown in [!ref](moose-iga-input).
+Because the [!ac](IGA) implementation in MOOSE relies on the tessellated extraction approach the primal variables `disp_x`, `disp_y`, and `disp_z` must use first-order Lagrange basis functions.
+Similarly the `AuxVariables` for stress post-processing must also use first-order monomial basis functions.
+In addition to visual interrogation of the output results, shown in [!ref](moose-iga-vtk), we define a `PointValue` probe, located at the anticipated maximum tensile stress location, in MOOSE to attempt to extract the maximum-value of the maximum principal stress (i.e., the maximum tensile stress).
+The reported values of these probes is reported in [!ref](table-probe-results).
 
-!listing examples/flex_iga/cframe/cframe_iga.i id=moose-iga-input caption=Complete input file for running example problem with [!ac](IGA) in MOOSE.
+!table 
+    id=table-probe-results 
+    caption=Reported values of maximum tensile stress from MOOSE probes for a quadratic immersed-spline mesh at different element sizes
+    style=width:70%;margin-left:auto;margin-right:auto;
+| Element Size | Value | Units | % Deviation from hand-calculation |
+| - | - | - | - |
+| $0.5000$ | $104 \times 10^3$ | $\mathrm{psi}$ | $-21\%$ |
+| $0.2500$ | $129 \times 10^3$ | $\mathrm{psi}$ | $-3\%$ |
+| $0.1250$ | $142 \times 10^3$ | $\mathrm{psi}$ | $7\%$ |
+| $0.0625$ | $141 \times 10^3$ | $\mathrm{psi}$ | $6\%$ |
 
-!media solid_mechanics/cframe_iga.png id=moose-iga-vtk caption=Maximum principal stress for "c-frame" example utilizing [!ac](IGA) in MOOSE.
+!listing examples/flex_iga/cframe/cframe_iga.i 
+    id=moose-iga-input 
+    caption=Complete input file for running example problem with [!ac](IGA) in MOOSE.
+
+!media solid_mechanics/iga/cframe_iga_results.png 
+    id=moose-iga-vtk 
+    caption=Maximum principal stress on the C-Frame. This figure was produced with the execution options: `--degree 2 --mesh-size 0.0625`.
+    style=width:70%;margin-left:auto;margin-right:auto;

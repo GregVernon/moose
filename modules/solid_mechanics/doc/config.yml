@@ -22,7 +22,9 @@ Extensions:
     MooseDocs.extensions.common:
         shortcuts: !include framework/doc/globals.yml
     MooseDocs.extensions.acronym:
-        acronyms: !include framework/doc/acronyms.yml
+        acronyms:
+            framework: !include framework/doc/acronyms.yml
+            module: !include modules/solid_mechanics/doc/acronyms.yml
     MooseDocs.extensions.template:
         active: True
     MooseDocs.extensions.sqa:
