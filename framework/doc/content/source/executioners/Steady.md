@@ -84,7 +84,7 @@ The general method in which the nonlinear system is solved is controlled by the 
 !equation
 \boldsymbol{R}' (\boldsymbol{u}) \boldsymbol{M}^{-1}\boldsymbol{v} \approx \frac{\boldsymbol{R}(\boldsymbol{u} + \epsilon \boldsymbol{M}^{-1}\boldsymbol{v}) - \boldsymbol{R}(\boldsymbol{u})}{\epsilon}
 
-## PETSc Options
+## PETSc Options id=petsc-options
 
 PETSc parameters can either be set on the command line or by using the [!param](/Executioner/Steady/petsc_options), [!param](/Executioner/Steady/petsc_options_iname), and [!param](/Executioner/Steady/petsc_options_value) parameters. Several PETSc parameters that users could frequently use are listed below:
 
