@@ -20,80 +20,90 @@ def run_cubit( args ):
     cubit.cmd( 'reset' )
     ## Import geometry
     cubit.cmd( f'import step "{os.path.join( path_to_this_script, "c-frame.step" )}" noheal' )
-    ## Modify geometry
-    ### Partition surfaces to create sets for boundary and load conditions
-    cubit.cmd( 'create vertex on curve 12 73  distance 1.5 from surface 74' )
-    cubit.cmd( 'create vertex on curve 17 78  distance 1.5 from surface 72' )
-    cubit.cmd( 'split surface 63  across location vertex 117  location vertex 118' )
-    cubit.cmd( 'split surface 97  across location vertex 119  location vertex 120' )
-    cubit.cmd( 'delete vertex all' )
-    ## Assign sets
-    cubit.cmd( 'block 1 volume 1' )
-    cubit.cmd( 'block 1 name "cframe"' )
-    cubit.cmd( 'sideset 1 surface 102' )
-    cubit.cmd( 'sideset 1 name "load_surface"' )
-    cubit.cmd( 'sideset 2 surface 103' )
-    cubit.cmd( 'sideset 2 name "hold_surface"' )
-    ## Mesh according to user input
     if args.mesh_mode == "boundingbox":
-        pass # Let Coreform Flex handle the meshing
-    elif args.mesh_mode == "bodyfit":
-        ### Defeature for body-fitted meshing
-        #### Remove blend surfaces
-        S = cubit.get_blend_surfaces( (1,) ) # Find blend surfaces in volume 1
-        cubit.cmd( f'remove surface {cubit.get_id_string( S )} extend' )
-        ### Partition for body-fitted meshing
-        cubit.cmd( 'webcut volume all with plane from surface 61' )
-        ### Enforce mesh continuity across partitions
-        cubit.cmd( 'imprint volume all' )
-        cubit.cmd( 'merge volume all' )
-        ### Assign mesh schemes and generate mesh
-        cubit.cmd( f'volume all size {args.mesh_size}' )
-        #### Mesh the top hole volume
-        num_radial_intervals = math.ceil( args.mesh_size / 0.25 )
-        cubit.cmd( f'surface 106 scheme hole rad_intervals {num_radial_intervals}' )
-        cubit.cmd( 'mesh surface 106' )
-        cubit.cmd( 'surface 106 smooth scheme mean ratio cpu 0.5' )
-        cubit.cmd( 'smooth surface 106' )
-        cubit.cmd( 'volume 2 redistribute nodes off' )
-        cubit.cmd( 'volume 2 autosmooth target on  fixed imprints off  smart smooth off' )
-        cubit.cmd( 'volume 2 scheme Sweep  source surface 106 target surface 108 sweep transform least squares' )
-        cubit.cmd( 'mesh volume 2' )
-        #### Mesh the curved beam volume
-        cubit.cmd( 'curve 55 128 134 242 34 107 244 241 243 207 175 177 28 113 49 204 interval same' )
-        cubit.cmd( 'curve 131 31 206 15 77 110 176 52 interval same' )
-        cubit.cmd( 'volume 1 redistribute nodes off' )
-        cubit.cmd( 'volume 1 autosmooth target on  fixed imprints off  smart smooth off' )
-        cubit.cmd( 'volume 1 scheme Sweep  source surface 113 target surface 114 sweep transform least squares' )
-        cubit.cmd( 'mesh volume 1' )
-        #### Mesh the bottom hole volume
-        cubit.cmd( f'surface 109 scheme hole rad_intervals {num_radial_intervals}' )
-        cubit.cmd( 'mesh surface 109' )
-        cubit.cmd( 'surface 109 smooth scheme mean ratio cpu 0.5' )
-        cubit.cmd( 'smooth surface 109' )
-        cubit.cmd( 'volume 3 redistribute nodes off' )
-        cubit.cmd( 'volume 3 autosmooth target on  fixed imprints off  smart smooth off' )
-        cubit.cmd( 'volume 3 scheme Sweep  source surface 109 target surface 112 sweep transform least squares' )
-        cubit.cmd( 'mesh volume 3' )
-    elif args.mesh_mode == "flexfit":
-        ### Create simplified geometry for "flex-fitted" meshing
-        cubit.cmd( 'volume 1 copy' )
-        #### Remove blend surfaces
-        S = cubit.get_blend_surfaces( (2,) ) # Find blend surfaces in volume 2
-        cubit.cmd( f'remove surface {cubit.get_id_string( S )} extend' )
-        #### Remove remaining small features
-        cubit.cmd( f'remove surface 165 167 171 173 188 189 190 198 199 200 201 202 204 205 extend' )
-        ### Assign volume to a mesh block
-        cubit.cmd( 'block 2 volume 2' )
-        cubit.cmd( 'block 2 name "cframe_flexmesh"' )
-        ### Assign mesh schemes and generate mesh
-        cubit.cmd( f'volume 2 size {args.mesh_size}' )
-        cubit.cmd( 'curve 312 307 233 229 317 353 301 375 interval same' )
-        cubit.cmd( 'curve 310 248 445 446 interval same' )
-        cubit.cmd( 'volume 2 redistribute nodes off' )
-        cubit.cmd( 'volume 2 autosmooth target on  fixed imprints off  smart smooth off' )
-        cubit.cmd( 'volume 2 scheme Sweep source surface 180 target surface 178 sweep transform least squares' )
-        cubit.cmd( 'mesh volume 2' )
+        ## Let Coreform Flex handle meshing...
+        ### Assign sets for boundary conditions
+        #### Partition surfaces to create sets for boundary and load conditions
+        cubit.cmd( f'create vertex on curve 12 73  distance {1.575 + 0.025} from surface 74' )
+        cubit.cmd( f'create vertex on curve 17 78  distance {1.575 + 0.025} from surface 72' )
+        cubit.cmd( 'split surface 63  across location vertex 117  location vertex 118' )
+        cubit.cmd( 'split surface 97  across location vertex 119  location vertex 120' )
+        cubit.cmd( 'delete vertex all' )
+        #### Make set assignments
+        cubit.cmd( 'block 1 volume 1' )
+        cubit.cmd( 'block 1 name "cframe"' )
+        cubit.cmd( 'sideset 1 surface 102' )
+        cubit.cmd( 'sideset 1 name "load_surface"' )
+        cubit.cmd( 'sideset 2 surface 103' )
+        cubit.cmd( 'sideset 2 name "hold_surface"' )
+    else:
+        ## Mesh according to user input
+        if args.mesh_mode == "bodyfit":
+            ### Defeature for body-fitted meshing
+            #### Remove blend surfaces
+            S = cubit.get_blend_surfaces( (1,) ) # Find blend surfaces in volume 1
+            cubit.cmd( f'remove surface {cubit.get_id_string( S )} extend' )
+            ### Assign sets for boundary conditions
+            #### Partition surfaces to create sets for boundary and load conditions
+            cubit.cmd( f'create vertex on curve 12 74  distance {1.575 + 0.025} from surface 74' )
+            cubit.cmd( f'create vertex on curve 17 79  distance {1.575 + 0.025} from surface 72' )
+            cubit.cmd( 'split surface 63  across location vertex 117  location vertex 118' )
+            cubit.cmd( 'split surface 97  across location vertex 119  location vertex 120' )
+            cubit.cmd( 'delete vertex all' )
+            #### Make set assignments
+            cubit.cmd( 'block 1 volume 1' )
+            cubit.cmd( 'block 1 name "cframe"' )
+            cubit.cmd( 'sideset 1 surface 101' )
+            cubit.cmd( 'sideset 1 name "load_surface"' )
+            cubit.cmd( 'sideset 2 surface 103' )
+            cubit.cmd( 'sideset 2 name "hold_surface"' )
+            ### Partition for body-fitted meshing
+            cubit.cmd( 'webcut volume all with plane from surface 92' )
+            cubit.cmd( 'webcut volume all with plane normal to curve 219  close_to vertex 121' )
+            cubit.cmd( 'webcut volume all with plane normal to curve 219  close_to vertex 10' )
+            cubit.cmd( 'webcut volume all with plane normal to curve 15  fraction .5 from start' )
+            cubit.cmd( 'webcut volume all with plane normal to curve 150  fraction .5 from start' )
+            cubit.cmd( 'webcut volume all with plane normal to curve 382  fraction .5 from start' )
+            cubit.cmd( 'webcut volume all with sheet extended from surface 134 131 182 167 130 146' )
+            ### Enforce mesh continuity across partitions
+            cubit.cmd( 'imprint volume all' )
+            cubit.cmd( 'merge volume all' )
+            ### Assign mesh schemes and generate mesh
+            cubit.cmd( f'volume all size {args.mesh_size}' )
+            cubit.cmd( "mesh volume all" )
+        elif args.mesh_mode == "flexfit":
+            ### Assign sets for boundary conditions
+            #### Partition surfaces to create sets for boundary and load conditions
+            cubit.cmd( f'create vertex on curve 12 73  distance {1.575 + 0.025} from surface 74' )
+            cubit.cmd( f'create vertex on curve 17 78  distance {1.575 + 0.025} from surface 72' )
+            cubit.cmd( 'split surface 63  across location vertex 117  location vertex 118' )
+            cubit.cmd( 'split surface 97  across location vertex 119  location vertex 120' )
+            cubit.cmd( 'delete vertex all' )
+            #### Make set assignments
+            cubit.cmd( 'block 1 volume 1' )
+            cubit.cmd( 'block 1 name "cframe"' )
+            cubit.cmd( 'sideset 1 surface 102' )
+            cubit.cmd( 'sideset 1 name "load_surface"' )
+            cubit.cmd( 'sideset 2 surface 103' )
+            cubit.cmd( 'sideset 2 name "hold_surface"' )
+            ### Create simplified geometry for "flex-fitted" meshing
+            cubit.cmd( 'volume 1 copy' )
+            #### Remove blend surfaces
+            S = cubit.get_blend_surfaces( (2,) ) # Find blend surfaces in volume 2
+            cubit.cmd( f'remove surface {cubit.get_id_string( S )} extend' )
+            #### Remove remaining small features
+            cubit.cmd( f'remove surface 165 167 171 173 188 189 190 198 199 200 201 202 204 205 extend' )
+            ### Assign volume to a mesh block
+            cubit.cmd( 'block 2 volume 2' )
+            cubit.cmd( 'block 2 name "cframe_flexmesh"' )
+            ### Assign mesh schemes and generate mesh
+            cubit.cmd( f'volume 2 size {args.mesh_size}' )
+            cubit.cmd( 'curve 312 307 233 229 317 353 301 375 interval same' )
+            cubit.cmd( 'curve 310 248 445 446 interval same' )
+            cubit.cmd( 'volume 2 redistribute nodes off' )
+            cubit.cmd( 'volume 2 autosmooth target on  fixed imprints off  smart smooth off' )
+            cubit.cmd( 'volume 2 scheme Sweep source surface 180 target surface 178 sweep transform least squares' )
+            cubit.cmd( 'mesh volume 2' )
     ## Save Coreform Cubit file for potential debugging
     cubit.cmd( 'save cub5 "cframe.cub5" overwrite' )
     ## Export Coreform Flex file
@@ -176,8 +186,10 @@ def script_arguments():
 if __name__ == "__main__":
     args = script_arguments()
     ## Validate arguments against current limitations
-    if args.mesh_mode != "boundingbox":
-        raise ValueError( f"Currently only 'boundingbox' mesh mode is supported by Coreform Flex Interop. You provided: {args.mesh_mode}" )
-    if args.num_moose_proc != 1:
-        raise ValueError( f"The current implementation in MOOSE only supports LU linear solvers, which are limited to serial processing (1 CPU). You provided: {args.num_moose_proc}" )
+    if args.mesh_mode == "flexfit":
+        raise ValueError( f"Currently only 'bodyfit' and 'boundingbox' mesh modes are supported by Coreform Flex Interop. You provided: {args.mesh_mode}" )
+    if args.num_trim_proc != 1:
+        raise ValueError( f"Coreform Flex currently only supports serial processing (1 CPU) for MOOSE simulations. You provided: {args.num_trim_proc}" )
+    if ( args.mesh_mode != "bodyfit" ) and ( args.num_moose_proc != 1 ):
+        raise ValueError( f"The current implementation in MOOSE for trimmed meshes only supports LU linear solvers, which is limited to serial processing (1 CPU). You provided: {args.num_moose_proc}" )
     main( args )

@@ -31,7 +31,6 @@
     [QuasiStatic]
       [./all]
         strain = SMALL
-        # add_variables = true
       [../]
     [../]
   [../]
@@ -71,7 +70,7 @@
     [load]
       # Applies the pressure
       boundary = 'load_surface'
-      factor = 2000 # psi
+      factor = 2307.8698361412416 # 3000 lbf / 1.2999 in^2
     []
   []
   [anchor_x]
@@ -119,24 +118,12 @@
   []
 []
 
-[Preconditioning]
-  [SMP]
-    # Creates the entire Jacobian, for the Newton solve
-    type = SMP
-    full = true
-  []
-[]
-
 [Postprocessors]
   [max_principal_stress_at_probe]
     type = PointValue
-    point = '0.000000 -1.500000 -4.3'
+    point = '0.000000 -1.500000 -4.25'
     variable = max_princ
     use_displaced_mesh = false
-  []
-  [max_principal_stress_extremum]
-    type = ElementExtremeValue
-    variable = max_princ
   []
 []
 
@@ -144,6 +131,14 @@
   type = FEProblem
   kernel_coverage_check = false
   material_coverage_check = false
+[]
+
+[Preconditioning]
+  [SMP]
+    # Creates the entire Jacobian, for the Newton solve
+    type = SMP
+    full = true
+  []
 []
 
 [Executioner]
