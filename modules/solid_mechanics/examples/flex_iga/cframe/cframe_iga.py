@@ -4,14 +4,14 @@ import math
 import argparse
 from pathlib import Path
 import subprocess
-from coreform_utils import import_cubit, import_flex, get_coreform_paths
+from coreform_utils import import_cubit, get_coreform_paths
 
 path_to_this_script = os.path.dirname( os.path.realpath( __file__ ) )
 
 def main( args ):
     run_cubit( args )
-    run_flex( args )
-    do_interop( args )
+    run_iga_mesh( args )
+    run_interop( args )
     run_moose( args )
 
 def run_cubit( args ):
@@ -109,55 +109,15 @@ def run_cubit( args ):
     ## Export Coreform Flex file
     cubit.cmd( 'export coreform "cframe_geom.cf" overwrite' )
 
-def run_flex( args ):
-    flex = import_flex()
-    flex.cmd( 'reset' )
-    flex.cmd( f'root_dir "{path_to_this_script}"' )
-
-    flex.cmd(f'open "cframe_geom.cf"' )
-
-    mesh_mode = args.mesh_mode
-    degree = args.degree
-    continuity = degree - 1
-    if mesh_mode == "bodyfit":
-        flex.cmd( f'mesh mesh_1 mesh_from_cf degree {degree} continuity {continuity}' )
-        flex.cmd( 'part 1 mesh 1' )
-    elif mesh_mode == "flexfit":
-        flex.cmd( f'mesh mesh_1 mesh_from_part part cframe_flexmesh degree {degree} continuity {continuity}' )
-        flex.cmd( 'part 1 mesh 1' )
-    elif mesh_mode == "boundingbox":
-        mesh_size = args.mesh_size
-        flex.cmd(f'mesh mesh_1 rectilinear degree {degree} continuity {continuity} element_size [{mesh_size} {mesh_size} {mesh_size}] padding [{degree} {degree} {degree}]' )
-        flex.cmd( 'part 1 mesh 1' )
-        flex.cmd( 'part 1 volume_box axis_aligned' )
-
-    flex.cmd( f'coreform_iga_version "{flex.version_short()}"' )
-    flex.cmd( 'label flex_cframe' )
-
-    flex.cmd( 'flex_models flex_inf new' )
-    flex.cmd( 'flex_models flex_inf database_name geom' )
-    flex.cmd( f'flex_models flex_inf small_cell_volume_ratio {args.small_cell_volume_ratio}' )
-
-    flex.cmd( 'flex_models flex_inf parts cframe_part new' )
-    flex.cmd( 'flex_models flex_inf parts cframe_part part cframe' )
-
-    flex.cmd( 'solid_mechanics_definitions boundary_conditions hold_bottom new' )
-    flex.cmd( 'solid_mechanics_definitions boundary_conditions hold_bottom set hold_surface' )
-
-    flex.cmd( 'solid_mechanics_definitions load_conditions push_top new' )
-    flex.cmd( 'solid_mechanics_definitions load_conditions push_top set load_surface' )
-
-    flex.cmd( 'procedures apply_load_procedure new' )
-    flex.cmd( 'procedures apply_load_procedure solid_mechanics flex_model flex_inf' )
-    flex.cmd( 'procedures apply_load_procedure solid_mechanics load_conditions 0 push_top' )
-    flex.cmd( 'procedures apply_load_procedure solid_mechanics boundary_conditions 0 hold_bottom' )
-
-    flex.cmd( 'save "cframe.cf"' )
-
-def do_interop( args ):
+def run_iga_mesh( args ):
     mpiexec = get_coreform_paths()["mpiexec"]
-    coreform_trim = get_coreform_paths()["trim"]
-    command = f"{mpiexec} -n {args.num_trim_proc} {coreform_trim} --ii cframe.cf --io trimmed_cframe_moose --epic"
+    coreform_iga_mesh = get_coreform_paths()["iga_mesh"]
+    command = f"{mpiexec} -n {args.num_mesh_proc} {coreform_iga_mesh} cframe_geom.cf --output-db meshed_cframe_moose.sql"
+    subprocess.check_call( command, shell=True )
+
+def run_interop( args ):
+    exodus_interop = get_coreform_paths()["exodus_interop"]
+    command = f"{exodus_interop} cframe_geom.cf meshed_cframe_moose.sql --output-prefix meshed_cframe_moose"
     subprocess.check_call( command, shell=True )
 
 def run_moose( args ):
@@ -166,20 +126,13 @@ def run_moose( args ):
     command = f"mpiexec -n {args.num_moose_proc} {moose_executable} -i {input_file}"
     subprocess.check_call( command, shell=True )
 
-def import_flex( verbose=False ):
-    coreform_paths = get_coreform_paths()
-    sys.path.append( os.fspath( coreform_paths["flex_path"] ) )
-    from coreform import flex
-    flex.init( verbose=verbose, gui=False )
-    return flex
-
 def script_arguments():
     parser = argparse.ArgumentParser(description="Run the Coreform pipeline.")
     parser.add_argument( "--degree", dest="degree", type=int, default=1 )
     parser.add_argument( "--mesh-size", dest="mesh_size", type=float, default=0.25 )
     parser.add_argument( "--mesh-mode", dest="mesh_mode", choices=["bodyfit", "flexfit", "boundingbox"], default="boundingbox" )
     parser.add_argument( "--small-cell-volume-ratio", dest="small_cell_volume_ratio", type=float, default=0.2 )
-    parser.add_argument( "--num-trim-proc", dest="num_trim_proc", type=int, default=1 )
+    parser.add_argument( "--num-mesh-proc", dest="num_mesh_proc", type=int, default=1 )
     parser.add_argument( "--num-moose-proc", dest="num_moose_proc", type=int, default=1 )
     return parser.parse_args()
 
@@ -188,8 +141,6 @@ if __name__ == "__main__":
     ## Validate arguments against current limitations
     if args.mesh_mode == "flexfit":
         raise ValueError( f"Currently only 'bodyfit' and 'boundingbox' mesh modes are supported by Coreform Flex Interop. You provided: {args.mesh_mode}" )
-    if args.num_trim_proc != 1:
-        raise ValueError( f"Coreform Flex currently only supports serial processing (1 CPU) for MOOSE simulations. You provided: {args.num_trim_proc}" )
     if ( args.mesh_mode != "bodyfit" ) and ( args.num_moose_proc != 1 ):
         raise ValueError( f"The current implementation in MOOSE for trimmed meshes only supports LU linear solvers, which is limited to serial processing (1 CPU). You provided: {args.num_moose_proc}" )
     main( args )
