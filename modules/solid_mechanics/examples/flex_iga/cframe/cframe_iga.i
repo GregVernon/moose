@@ -5,8 +5,8 @@
 [Mesh]
    [igafile]
        type = FileMeshGenerator
-       file = 'trimmed_cframe_moose.exo'
-       constraint_matrix = 'trimmed_cframe_moose.h5'
+       file = 'meshed_cframe_moose.exo'
+       constraint_matrix = 'meshed_cframe_moose.h5'
        constraint_preconditioning = 1.0
    []
 []

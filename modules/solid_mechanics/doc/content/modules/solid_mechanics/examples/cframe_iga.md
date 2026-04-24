@@ -112,14 +112,14 @@ To run the example, you will need the following software installed:
 
 1. MOOSE, with a built `solid_mechanics` module (using the default `opt` mode).
 2. Coreform Cubit (version 2025.10 or later).
-3. Coreform Flex (version 2025.10 or later).
+3. Coreform IGA with `build_cf.py`, `coreform_iga_mesh`, and `exodus_interop`.
 4. ParaView (for visualization of results).
 
-Coreform Cubit and Coreform Flex are products released and maintained by Coreform, Inc.
+Coreform Cubit and Coreform IGA are products released and maintained by Coreform, Inc.
 Non-commercial MOOSE users can acquire free "associate" licenses for both products by registering at [Coreform's website](https://coreform.com/products/coreform-cubit/free-meshing-software/).
 Funded academic and commercial users should [contact Coreform directly](https://coreform.com/support/contact/) for licensing information.
 
-Additionally, to support CI/CD we have provided preprocessed mesh files and extraction operators in the example directory, so it is not strictly necessary to have Coreform Cubit or Flex installed to run the MOOSE simulation used in the automated test-suite.
+Additionally, to support CI/CD we have provided preprocessed mesh files and extraction operators in the example directory, so it is not strictly necessary to have Coreform Cubit or Coreform IGA installed to run the MOOSE simulation used in the automated test-suite.
 
 ### Coreform pipeline execution
 
@@ -128,21 +128,31 @@ cd ~/projects/moose/modules/solid_mechanics/examples/flex_iga/cframe
 python3 cframe_iga.py
 ```
 
-The Python script performs four main tasks:
+If Coreform is installed in a non-default location, provide the Coreform IGA `bin` directory and the Cubit Python module directory explicitly:
+
+```bash
+python3 cframe_iga.py --bin-dir /path/to/Coreform-IGA/bin --cubit-python-module-path /path/to/Coreform-Cubit/bin
+```
+
+The Python script performs five main tasks:
 
 1. `run_cubit()`
 
-    - Setup the CAD model and, if requested, generate body-fitted or partially-fitted spline meshes using Coreform Cubit.
+    - Setup the CAD model, assign the block and sidesets, and export a Coreform `.cf` file from Coreform Cubit.
 
-2. `run_flex()`
+2. `run_build_cf()`
 
-    - Define the spline parameters and, if requested, generate an immersed spline mesh using Coreform Flex.
+    - Convert the Cubit-exported `.cf` file into the meshing-ready Coreform IGA `.cf` file, including the rectilinear mesh frame and trimming options.
 
-3. `run_interop()`
+3. `run_iga_mesh()`
 
-    - Compute the trimmed spline extraction operators using Coreform Trim and export to MOOSE-compatible files.
+    - Run `coreform_iga_mesh` to create the generic SQL mesh database.
 
-4. `run_moose()`
+4. `run_interop()`
+
+    - Run `exodus_interop` to create the Exodus mesh and HDF5 extraction-operator sidecar used by MOOSE.
+
+5. `run_moose()`
 
     - Setup and run the MOOSE simulation using the generated mesh and extraction operators.
 
@@ -150,11 +160,7 @@ The Python script performs four main tasks:
 
 ## Isogeometric Model Setup
 
-The `cframe_iga.py` script supports setting up three meshing approaches:
-
-1. Body-fitted meshing.
-2. Partially-immersed ("Flex-fitted") meshing.
-3. Fully-immersed meshing via a bounding-box approach.
+The refreshed `cframe_iga.py` script currently uses the immersed Coreform IGA workflow. Older body-fitted and partially-immersed Flex workflows are not part of this Exodus export path.
 
 ### Body-fitted mesh
 
